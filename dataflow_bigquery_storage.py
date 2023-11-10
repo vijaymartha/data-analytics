@@ -1,4 +1,49 @@
 import apache_beam as beam
+from apache_beam.options.pipeline_options import PipelineOptions
+
+# Replace 'your_project', 'your_dataset', and 'table1'/'table2' with your actual project, dataset, and table names.
+project_id = 'your_project'
+dataset_id = 'your_dataset'
+table1_id = 'table1'
+table2_id = 'table2'
+
+# Define your pipeline options
+options = PipelineOptions()
+
+def compare_rows(row1, row2):
+    # Compare rows column-wise and value-wise
+    # Add your custom comparison logic here
+    return row1 == row2
+
+# Define your pipeline
+with beam.Pipeline(options=options) as p:
+    # Read data from the first table
+    data1 = (
+        p
+        | 'Read from Table1' >> beam.io.Read(beam.io.BigQuerySource(query=f'SELECT * FROM `{project_id}.{dataset_id}.{table1_id}`', use_standard_sql=True))
+    )
+
+    # Read data from the second table
+    data2 = (
+        p
+        | 'Read from Table2' >> beam.io.Read(beam.io.BigQuerySource(query=f'SELECT * FROM `{project_id}.{dataset_id}.{table2_id}`', use_standard_sql=True))
+    )
+
+    # Compare the rows using a custom function
+    compared_data = (
+        {'data1': data1, 'data2': data2}
+        | 'Compare Rows' >> beam.Map(lambda element: compare_rows(element['data1'], element['data2']))
+        | 'Filter Mismatched Rows' >> beam.Filter(lambda comparison_result: not comparison_result)
+        | 'Print Mismatched Rows' >> beam.Map(print)
+    )
+
+
+
+
+
+
+#####
+import apache_beam as beam
 from apache_beam.io.gcp.bigquery_tools import parse_table_schema_from_json
 from apache_beam.io.gcp.bigquery_tools import parse_table_reference_from_string
 
@@ -31,42 +76,6 @@ read_result = (
     )
     | 'Print Results' >> beam.Map(print)
 )
-
-# Execute the pipeline
-pipeline.run()
-
-import apache_beam as beam
-from apache_beam.io import WriteToText
-from apache_beam.io.gcp.bigquery import BigQuerySource
-
-# Replace 'your_project', 'your_dataset', and 'your_table' with your actual project, dataset, and table names.
-project_id = 'your_project'
-dataset_id = 'your_dataset'
-table_id = 'your_table'
-
-# Replace 'your_bucket' with your GCS bucket name.
-output_bucket = 'your_bucket'
-output_file_prefix = 'output_data'
-
-# BigQuery query to fetch data
-query = f'SELECT * FROM `{project_id}.{dataset_id}.{table_id}`'
-
-# Define a function to format output file names
-def format_output(element):
-    return element
-
-# Create a Dataflow pipeline
-options = beam.options.pipeline_options.PipelineOptions()
-pipeline = beam.Pipeline(options=options)
-
-# Read data from BigQuery using a query
-data_from_bigquery = (
-    pipeline
-    | 'Read from BigQuery' >> beam.io.Read(beam.io.BigQuerySource(query=query, use_standard_sql=True))
-)
-
-# Write data to GCS
-data_from_bigquery | 'Write to GCS' >> WriteToText(f'gs://{output_bucket}/{output_file_prefix}')
 
 # Execute the pipeline
 pipeline.run()
