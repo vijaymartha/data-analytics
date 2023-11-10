@@ -34,3 +34,39 @@ read_result = (
 
 # Execute the pipeline
 pipeline.run()
+
+import apache_beam as beam
+from apache_beam.io import WriteToText
+from apache_beam.io.gcp.bigquery import BigQuerySource
+
+# Replace 'your_project', 'your_dataset', and 'your_table' with your actual project, dataset, and table names.
+project_id = 'your_project'
+dataset_id = 'your_dataset'
+table_id = 'your_table'
+
+# Replace 'your_bucket' with your GCS bucket name.
+output_bucket = 'your_bucket'
+output_file_prefix = 'output_data'
+
+# BigQuery query to fetch data
+query = f'SELECT * FROM `{project_id}.{dataset_id}.{table_id}`'
+
+# Define a function to format output file names
+def format_output(element):
+    return element
+
+# Create a Dataflow pipeline
+options = beam.options.pipeline_options.PipelineOptions()
+pipeline = beam.Pipeline(options=options)
+
+# Read data from BigQuery using a query
+data_from_bigquery = (
+    pipeline
+    | 'Read from BigQuery' >> beam.io.Read(beam.io.BigQuerySource(query=query, use_standard_sql=True))
+)
+
+# Write data to GCS
+data_from_bigquery | 'Write to GCS' >> WriteToText(f'gs://{output_bucket}/{output_file_prefix}')
+
+# Execute the pipeline
+pipeline.run()
